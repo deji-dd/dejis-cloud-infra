@@ -1,0 +1,75 @@
+name: Deploy to Cloud
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to dejis-cloud
+    runs-on: ubuntu-latest
+    env:
+      SERVER_HOST: dejis-cloud
+      SERVER_USER: root
+      DEPLOY_DIR: /opt/dejis-cloud-infra
+      SOCKET_DIR: /var/run/postgres-sockets
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Setup Server Directories & Socket Permissions
+        run: |
+          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "bash -s" << EOF
+            set -euo pipefail
+            echo "Creating and configuring socket directory for IPC..."
+            mkdir -p "${SOCKET_DIR}"
+            chown -R 999:999 "${SOCKET_DIR}"
+            chmod 777 "${SOCKET_DIR}"
+
+            echo "Ensuring deployment directory exists..."
+            mkdir -p "${DEPLOY_DIR}"
+          EOF
+
+      - name: Sync Infrastructure Files
+        run: |
+          echo "Streaming repository files to ${SERVER_HOST}:${DEPLOY_DIR}..."
+          tar -czf - --exclude='.git' --exclude='.env' --exclude='.github' . | \
+            ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} \
+            "tar -xzf - -C ${DEPLOY_DIR}"
+
+      - name: Verify Server .env Exists
+        run: |
+          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "bash -s" << EOF
+            set -euo pipefail
+            if [ ! -f "${DEPLOY_DIR}/.env" ]; then
+              echo "::error::Missing .env file at ${DEPLOY_DIR}/.env on ${SERVER_HOST}!"
+              echo "Aborting deploy. Run ./scripts/sync-env.sh to push .env to the server first."
+              exit 1
+            fi
+            echo "Confirmed: ${DEPLOY_DIR}/.env is present."
+          EOF
+
+      - name: Pull Docker Images
+        run: |
+          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} \
+            "cd ${DEPLOY_DIR} && docker compose pull"
+
+      - name: Deploy Containers with Docker Compose
+        run: |
+          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} \
+            "cd ${DEPLOY_DIR} && docker compose up -d --remove-orphans"
+
+      - name: Verify Container Status
+        run: |
+          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} \
+            "cd ${DEPLOY_DIR} && docker compose ps"

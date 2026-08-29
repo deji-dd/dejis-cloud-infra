@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    restart: unless-stopped
+    # -c listen_addresses='' disables TCP listening completely, forcing IPC (Unix Domain Socket) only
+    command: postgres -c listen_addresses=''
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dejis_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      # Host socket directory mounted to PostgreSQL standard socket directory for IPC
+      - /var/run/postgres-sockets:/var/run/postgresql
+      # Persistent database storage
+      - postgres_data:/var/lib/postgresql/data
+    shm_size: 256mb
+
+volumes:
+  postgres_data:

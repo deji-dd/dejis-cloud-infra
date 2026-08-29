@@ -1,0 +1,11 @@
+# Environment variables (keep local or sync securely)
+.env
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+scripts/sync-env.sh
