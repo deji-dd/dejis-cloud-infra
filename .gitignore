@@ -8,4 +8,10 @@ Thumbs.db
 .vscode/
 *.swp
 
+# Scripts
 scripts/sync-env.sh
+
+# Repomix
+repomix-output.xml
+.repomixignore
+repomix.config.json
