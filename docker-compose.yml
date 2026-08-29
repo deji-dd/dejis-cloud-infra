@@ -12,8 +12,8 @@ services:
     volumes:
       # Host socket directory mounted to PostgreSQL standard socket directory for IPC
       - /var/run/postgres-sockets:/var/run/postgresql
-      # Persistent database storage
-      - postgres_data:/var/lib/postgresql/data
+      # Persistent database storage (PostgreSQL 18+ stores versioned data under /var/lib/postgresql)
+      - postgres_data:/var/lib/postgresql
     shm_size: 256mb
 
 volumes:
