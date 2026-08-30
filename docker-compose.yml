@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:latest
+    image: postgres:18
     container_name: postgres
     restart: unless-stopped
     # -c listen_addresses='' disables TCP listening completely, forcing IPC (Unix Domain Socket) only
@@ -17,10 +17,10 @@ services:
     shm_size: 256mb
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-postgres}", "-d", "${POSTGRES_DB:-dejis_db}", "-h", "/var/run/postgresql"]
-      interval: 60s
+      interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 10s
+      retries: 5
+      start_period: 15s
 
   beszel:
     image: henrygd/beszel:latest
@@ -35,10 +35,10 @@ services:
       - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "/beszel", "health", "--url", "http://localhost:8090"]
-      interval: 60s
-      timeout: 5s
+      interval: 120s
+      timeout: 3s
       retries: 3
-      start_period: 10s
+      start_period: 5s
 
   beszel-agent:
     image: henrygd/beszel-agent:latest
@@ -58,10 +58,10 @@ services:
       KEY: ${BESZEL_AGENT_KEY:-}
     healthcheck:
       test: ["CMD", "/agent", "health"]
-      interval: 60s
-      timeout: 5s
+      interval: 120s
+      timeout: 3s
       retries: 3
-      start_period: 10s
+      start_period: 5s
 
 volumes:
   postgres_data:
