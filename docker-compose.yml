@@ -15,6 +15,12 @@ services:
       # Persistent database storage (PostgreSQL 18+ stores versioned data under /var/lib/postgresql)
       - postgres_data:/var/lib/postgresql
     shm_size: 256mb
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-postgres}", "-d", "${POSTGRES_DB:-dejis_db}", "-h", "/var/run/postgresql"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   beszel:
     image: henrygd/beszel:latest
@@ -27,6 +33,12 @@ services:
       - beszel_socket:/beszel_socket
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "/beszel", "health", "--url", "http://localhost:8090"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   beszel-agent:
     image: henrygd/beszel-agent:latest
@@ -44,6 +56,12 @@ services:
       TOKEN: ${BESZEL_AGENT_TOKEN:-}
       # Required: SSH public key generated when adding the system in Beszel Hub UI
       KEY: ${BESZEL_AGENT_KEY:-}
+    healthcheck:
+      test: ["CMD", "/agent", "health"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   postgres_data:
