@@ -15,6 +15,7 @@ jobs:
       SERVER_USER: root
       DEPLOY_DIR: /opt/dejis-cloud-infra
       SOCKET_DIR: /var/run/postgres-sockets
+      REDIS_SOCKET_DIR: /var/run/redis-sockets
 
     steps:
       - name: Checkout Repository
@@ -31,10 +32,15 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "bash -s" << EOF
             set -euo pipefail
-            echo "Creating and configuring socket directory for IPC..."
+            echo "Creating and configuring PostgreSQL socket directory for IPC..."
             mkdir -p "${SOCKET_DIR}"
             chown -R 999:999 "${SOCKET_DIR}"
             chmod 777 "${SOCKET_DIR}"
+
+            echo "Creating and configuring Redis socket directory for IPC..."
+            mkdir -p "${REDIS_SOCKET_DIR}"
+            chown -R 999:999 "${REDIS_SOCKET_DIR}"
+            chmod 777 "${REDIS_SOCKET_DIR}"
 
             echo "Ensuring deployment directory exists..."
             mkdir -p "${DEPLOY_DIR}"

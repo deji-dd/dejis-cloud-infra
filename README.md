@@ -7,6 +7,7 @@ Cloud infrastructure configuration and automated deployment pipeline for `dejis-
 This repository manages containerized services running on the `dejis-cloud` instance, featuring:
 
 - **PostgreSQL via IPC**: Runs `postgres:18` with TCP disabled (`listen_addresses=''`). All database communication occurs strictly over Unix Domain Sockets mounted at `/var/run/postgres-sockets` on the host.
+- **Redis via IPC**: Runs `redis:latest` with TCP disabled (`--port 0`) and AOF persistence enabled. All caching and queue operations occur strictly over Unix Domain Sockets mounted at `/var/run/redis-sockets/redis.sock` on the host.
 - **Beszel Monitoring**: Runs `henrygd/beszel:latest` (central dashboard on port `8090`) and `henrygd/beszel-agent:latest` (lightweight host and Docker metrics agent connected via IPC Unix socket).
 - **Keyless CI/CD Deployment**: Automated GitHub Actions workflow that connects via Tailscale OAuth and executes deployments over **Tailscale SSH** (no static private SSH keys).
 - **Zero-Disk Backup Streaming**: Daily automated backup script that dumps PostgreSQL, compresses the stream on the fly, and pipes it directly over Tailscale SSH to a secondary GCP instance without consuming local storage on `dejis-cloud`.
@@ -20,6 +21,7 @@ All instance services run as separate, isolated containers orchestrated through 
 | Service | Image | Purpose | Network / Access |
 | :--- | :--- | :--- | :--- |
 | `postgres` | `postgres:18` | Primary database | IPC only via `/var/run/postgres-sockets` (TCP disabled) |
+| `redis` | `redis:latest` | In-memory cache & key-value store | IPC only via `/var/run/redis-sockets/redis.sock` (TCP disabled) |
 | `beszel` | `henrygd/beszel:latest` | Monitoring Web UI & Hub | Port `8090` |
 | `beszel-agent` | `henrygd/beszel-agent:latest` | Metrics & Docker stats collector | `network_mode: host`, communicates with hub via IPC socket |
 

@@ -22,6 +22,24 @@ services:
       retries: 5
       start_period: 15s
 
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: unless-stopped
+    # --port 0 disables TCP listening completely, forcing IPC (Unix Domain Socket) only
+    command: redis-server --port 0 --unixsocket /var/run/redis/redis.sock --unixsocketperm 777 --appendonly yes
+    volumes:
+      # Host socket directory mounted to Redis standard socket directory for IPC
+      - /var/run/redis-sockets:/var/run/redis
+      # Persistent storage
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-s", "/var/run/redis/redis.sock", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
   beszel:
     image: henrygd/beszel:latest
     container_name: beszel
@@ -68,4 +86,5 @@ volumes:
   beszel_data:
   beszel_agent_data:
   beszel_socket:
+  redis_data:
 
