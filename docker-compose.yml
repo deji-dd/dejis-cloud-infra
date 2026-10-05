@@ -4,7 +4,26 @@ services:
     container_name: postgres
     restart: unless-stopped
     # -c listen_addresses='' disables TCP listening completely, forcing IPC (Unix Domain Socket) only
-    command: postgres -c listen_addresses=''
+    #
+    # The remaining flags are explicit tuning. Out of the box postgres:18 runs
+    # shared_buffers=128MB / work_mem=4MB / maintenance_work_mem=64MB, which is
+    # sized for a generic container and is the main reason repeated scans over
+    # the larger tables (personal_logs, faction_attack_logs, merc_contract_hits)
+    # fall through to disk. Every value is overridable from .env.
+    #
+    # SIZING: the defaults below assume a ~4GB instance. Check with `free -h` on
+    # the host and adjust:
+    #   shared_buffers       ~ 25% of RAM
+    #   effective_cache_size ~ 50-75% of RAM (planner hint only, allocates nothing)
+    command: >-
+      postgres
+      -c listen_addresses=''
+      -c shared_buffers=${POSTGRES_SHARED_BUFFERS:-512MB}
+      -c effective_cache_size=${POSTGRES_EFFECTIVE_CACHE_SIZE:-2GB}
+      -c work_mem=${POSTGRES_WORK_MEM:-16MB}
+      -c maintenance_work_mem=${POSTGRES_MAINTENANCE_WORK_MEM:-128MB}
+      -c random_page_cost=${POSTGRES_RANDOM_PAGE_COST:-1.1}
+      -c effective_io_concurrency=${POSTGRES_EFFECTIVE_IO_CONCURRENCY:-200}
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-dejis_db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}

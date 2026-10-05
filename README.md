@@ -25,6 +25,46 @@ All instance services run as separate, isolated containers orchestrated through 
 
 ---
 
+## PostgreSQL Tuning
+
+The `postgres` service passes explicit `-c` flags rather than relying on image defaults (`shared_buffers=128MB`, `work_mem=4MB`, `maintenance_work_mem=64MB`), which are sized for a generic container.
+
+| Setting | Default here | Why |
+| :--- | :--- | :--- |
+| `shared_buffers` | `512MB` | Image default (128MB) forces repeated scans of hot tables to disk. |
+| `effective_cache_size` | `2GB` | Planner hint only — allocates nothing. Lets the planner prefer index scans over seq scans. |
+| `work_mem` | `16MB` | The ledger reconciliation sweeps sort and hash-join `personal_logs`; 4MB spills to disk. |
+| `maintenance_work_mem` | `128MB` | Speeds up `VACUUM` and `CREATE INDEX`. |
+| `random_page_cost` | `1.1` | Storage is SSD; the default `4.0` assumes spinning rust and discourages index use. |
+| `effective_io_concurrency` | `200` | SSD-appropriate read-ahead for bitmap heap scans. |
+
+### Sizing these to the host
+
+The defaults above assume a **~4GB instance**. Confirm with `free -h` on `dejis-cloud` and adjust in `.env` (picked up via `${VAR:-default}` — no compose edit needed):
+
+```bash
+POSTGRES_SHARED_BUFFERS=1GB          # ~25% of RAM
+POSTGRES_EFFECTIVE_CACHE_SIZE=3GB    # ~50-75% of RAM
+```
+
+**Do not set `shared_buffers` above ~25% of host RAM.** The host also runs the three `sentinel-*` containers plus Beszel, and an oversized buffer pool will OOM the instance rather than speed it up.
+
+After changing values:
+
+```bash
+docker compose up -d postgres        # recreate to apply
+docker compose logs --tail=20 postgres
+```
+
+Verify the settings actually took effect:
+
+```bash
+docker exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  -c "SHOW shared_buffers;" -c "SHOW effective_cache_size;" -c "SHOW work_mem;"
+```
+
+---
+
 ## Beszel Monitoring Setup
 
 1. **Deploy Containers**:
