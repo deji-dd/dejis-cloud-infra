@@ -9,7 +9,7 @@ This repository manages containerized services running on the `dejis-cloud` inst
 - **PostgreSQL via IPC**: Runs `postgres:18` with TCP disabled (`listen_addresses=''`). All database communication occurs strictly over Unix Domain Sockets mounted at `/var/run/postgres-sockets` on the host.
 - **Beszel Monitoring**: Runs `henrygd/beszel:latest` (central dashboard on port `8090`) and `henrygd/beszel-agent:latest` (lightweight host and Docker metrics agent connected via IPC Unix socket).
 - **Keyless CI/CD Deployment**: Automated GitHub Actions workflow that connects via Tailscale OAuth and executes deployments over **Tailscale SSH** (no static private SSH keys).
-- **Zero-Disk Backup Streaming**: Daily automated backup script that dumps PostgreSQL, compresses the stream on the fly, and pipes it directly over Tailscale SSH to a secondary GCP instance without consuming local storage on `dejis-cloud`.
+- **Verified Cloudflare R2 Backups**: Daily automated backup that dumps PostgreSQL, verifies the uploaded archive by MD5 before it is promoted, then rotates it under a GFS scheme (7 daily / 4 weekly / 12 monthly) in R2. The legacy Tailscale-SSH-to-GCP path has been retired; R2 is the sole destination.
 
 ---
 
@@ -94,7 +94,7 @@ docker exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
 ├── .github/workflows/
 │   └── deploy.yml         # CI/CD deployment pipeline via Tailscale SSH
 ├── scripts/
-│   ├── backup-to-gcp.sh   # Direct-to-GCP database backup streaming script
+│   ├── backup-to-r2.sh    # Cluster backup -> Cloudflare R2, MD5-verified, GFS rotation
 │   └── sync-env.sh        # Secure local-to-server .env sync script
 ├── docker-compose.yml     # Multi-container service definitions (Postgres, Beszel)
 └── .gitignore
