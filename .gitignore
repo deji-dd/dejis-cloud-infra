@@ -11,6 +11,7 @@ Thumbs.db
 # Scripts
 scripts/sync-env.sh
 scripts/macos/dev-optimize.sh
+docs/macos-dev-workstation.md
 
 # Repomix
 repomix-output.xml
