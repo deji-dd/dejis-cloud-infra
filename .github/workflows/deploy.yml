@@ -47,6 +47,15 @@ jobs:
             ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} \
             "tar -xzf - -C ${DEPLOY_DIR}"
 
+      - name: Ensure Scripts Are Executable
+        run: |
+          # tar preserves whatever mode actions/checkout restored from git. A
+          # script committed as 100644 lands non-executable, and cron's direct
+          # invocation then dies with "Permission denied" into a log nobody
+          # reads -- which is exactly how backups were skipped on Oct 8/18/19.
+          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} \
+            "chmod +x ${DEPLOY_DIR}/scripts/*.sh"
+
       - name: Verify Server .env Exists
         run: |
           ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "bash -s" << EOF
